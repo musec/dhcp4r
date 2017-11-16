@@ -1,7 +1,7 @@
 #[macro_use(u32_bytes, bytes_u32)]
 extern crate dhcp4r;
 
-use std::net::UdpSocket;
+use std::net::{Ipv4Addr, UdpSocket};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::ops::Add;
@@ -35,7 +35,7 @@ fn main() {
 }
 
 struct MyServer {
-    leases: HashMap<u32, ([u8; 6], Instant)>,
+    leases: HashMap<Ipv4Addr, ([u8; 6], Instant)>,
     last_lease: u32,
     lease_duration: Duration,
 }
@@ -52,7 +52,7 @@ impl server::Handler for MyServer {
                         reply(server,
                               options::MessageType::Offer,
                               in_packet,
-                              [r[0], r[1], r[2], r[3]]);
+                              Ipv4Addr::from([r[0], r[1], r[2], r[3]]));
                         return;
                     }
                 }
@@ -61,7 +61,7 @@ impl server::Handler for MyServer {
                     reply(server,
                           options::MessageType::Offer,
                           in_packet,
-                          u32_bytes!(ip));
+                          ip);
                     return;
                 }
                 // Otherwise choose a free ip if available
@@ -71,7 +71,7 @@ impl server::Handler for MyServer {
                         reply(server,
                               options::MessageType::Offer,
                               in_packet,
-                              u32_bytes!(IP_START_NUM + &self.last_lease));
+                              Ipv4Addr::from(IP_START_NUM + &self.last_lease));
                         break;
                     }
                 }
@@ -83,21 +83,20 @@ impl server::Handler for MyServer {
                     return;
                 }
                 let req_ip = match in_packet.option(options::REQUESTED_IP_ADDRESS) {
-                    None => in_packet.ciaddr,
+                    None => Ipv4Addr::from(in_packet.ciaddr),
                     Some(x) => {
                         if x.len() != 4 {
                             return;
                         } else {
-                            [x[0], x[1], x[2], x[3]]
+                            Ipv4Addr::new(x[0], x[1], x[2], x[3])
                         }
                     }
                 };
-                let req_ip_num = bytes_u32!(req_ip);
-                if !&self.available(&in_packet.chaddr, req_ip_num) {
+                if !&self.available(&in_packet.chaddr, bytes_u32!(req_ip.octets())) {
                     nak(server, in_packet, b"Requested IP not available".to_vec());
                     return;
                 }
-                self.leases.insert(req_ip_num,
+                self.leases.insert(req_ip,
                                    (in_packet.chaddr, Instant::now().add(self.lease_duration)));
                 reply(server, options::MessageType::Ack, in_packet, req_ip);
             }
@@ -122,13 +121,13 @@ impl server::Handler for MyServer {
 impl MyServer {
     fn available(&self, chaddr: &[u8; 6], pos: u32) -> bool {
         return pos >= IP_START_NUM && pos < IP_START_NUM + LEASE_NUM &&
-               match self.leases.get(&pos) {
+               match self.leases.get(&Ipv4Addr::from(pos)) {
             Some(x) => x.0 == *chaddr || Instant::now().gt(&x.1),
             None => true,
         };
     }
 
-    fn current_lease(&self, chaddr: &[u8; 6]) -> Option<u32> {
+    fn current_lease(&self, chaddr: &[u8; 6]) -> Option<Ipv4Addr> {
         for (i, v) in &self.leases {
             if &v.0 == chaddr {
                 return Some(*i);
@@ -141,7 +140,7 @@ impl MyServer {
 fn reply(s: &server::Server,
          msg_type: options::MessageType,
          req_packet: packet::Packet,
-         offer_ip: [u8; 4]) {
+         offer_ip: Ipv4Addr) {
     let _ = s.reply(msg_type,
                     vec![options::DhcpOption {
                              code: options::IP_ADDRESS_LEASE_TIME,
@@ -169,6 +168,6 @@ fn nak(s: &server::Server, req_packet: packet::Packet, message: Vec<u8>) {
                              code: options::MESSAGE,
                              data: message,
                          }],
-                    [0, 0, 0, 0],
+                    Ipv4Addr::new(0, 0, 0, 0),
                     req_packet);
 }

@@ -76,7 +76,7 @@ impl Server {
     pub fn reply(&self,
                  msg_type: MessageType,
                  additional_options: Vec<DhcpOption>,
-                 offer_ip: [u8; 4],
+                 offer_ip: Ipv4Addr,
                  req_packet: Packet)
                  -> std::io::Result<usize> {
 
@@ -109,7 +109,7 @@ impl Server {
             secs: 0,
             broadcast: req_packet.broadcast,
             ciaddr: ciaddr,
-            yiaddr: offer_ip,
+            yiaddr: offer_ip.octets(),
             siaddr: [0, 0, 0, 0],
             giaddr: req_packet.giaddr,
             chaddr: req_packet.chaddr,
