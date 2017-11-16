@@ -1,13 +1,13 @@
 use num_traits::FromPrimitive;
 
-pub struct DhcpOption<'a> {
+pub struct DhcpOption {
     pub code: u8,
-    pub data: &'a [u8],
+    pub data: Vec<u8>,
 }
 
-impl<'a> DhcpOption<'a> {
+impl DhcpOption {
     /// Returns name of DHCP Option code
-    pub fn title(&'a self) -> String {
+    pub fn title(&self) -> String {
         match title(self.code) {
             Some(t) => t.to_string(),
             None => "Unknown (".to_string() + &self.code.to_string() + ")",

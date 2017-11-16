@@ -1,7 +1,7 @@
 use options::*;
 
 /// DHCP Packet Structure
-pub struct Packet<'a> {
+pub struct Packet {
     pub reply: bool, // false = request, true = reply
     pub hops: u8,
     pub xid: [u8; 4], // Random identifier
@@ -12,7 +12,7 @@ pub struct Packet<'a> {
     pub siaddr: [u8; 4],
     pub giaddr: [u8; 4],
     pub chaddr: [u8; 6],
-    pub options: Vec<DhcpOption<'a>>,
+    pub options: Vec<DhcpOption>,
 }
 
 /// Parses Packet from byte array
@@ -41,7 +41,7 @@ pub fn decode(p: &[u8]) -> Result<Packet, &'static str> {
                 if opt_end < l {
                     options.push(DhcpOption {
                         code: code,
-                        data: &p[i + 2..opt_end],
+                        data: p[i + 2..opt_end].to_vec(),
                     });
                     i = opt_end;
                     continue;
@@ -65,12 +65,12 @@ pub fn decode(p: &[u8]) -> Result<Packet, &'static str> {
     })
 }
 
-impl<'a> Packet<'a> {
+impl Packet {
     /// Extracts requested option payload from packet if available
-    pub fn option(&self, code: u8) -> Option<&'a [u8]> {
+    pub fn option(&self, code: u8) -> Option<Vec<u8>> {
         for option in &self.options {
             if option.code == code {
-                return Some(&option.data);
+                return Some(option.data.clone());
             }
         }
         None
@@ -123,7 +123,7 @@ impl<'a> Packet<'a> {
         for option in &self.options {
             p[length] = option.code;
             p[length + 1] = option.data.len() as u8;
-            p[length + 2..length + 2 + option.data.len()].clone_from_slice(option.data);
+            p[length + 2..length + 2 + option.data.len()].clone_from_slice(&option.data);
             length += 2 + option.data.len();
         }
         p[length] = END;

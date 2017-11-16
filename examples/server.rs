@@ -94,7 +94,7 @@ impl server::Handler for MyServer {
                 };
                 let req_ip_num = bytes_u32!(req_ip);
                 if !&self.available(&in_packet.chaddr, req_ip_num) {
-                    nak(server, in_packet, b"Requested IP not available");
+                    nak(server, in_packet, b"Requested IP not available".to_vec());
                     return;
                 }
                 self.leases.insert(req_ip_num,
@@ -145,25 +145,25 @@ fn reply(s: &server::Server,
     let _ = s.reply(msg_type,
                     vec![options::DhcpOption {
                              code: options::IP_ADDRESS_LEASE_TIME,
-                             data: &LEASE_DURATION_BYTES,
+                             data: LEASE_DURATION_BYTES.to_vec(),
                          },
                          options::DhcpOption {
                              code: options::SUBNET_MASK,
-                             data: &SUBNET_MASK,
+                             data: SUBNET_MASK.to_vec(),
                          },
                          options::DhcpOption {
                              code: options::ROUTER,
-                             data: &ROUTER_IP,
+                             data: ROUTER_IP.to_vec(),
                          },
                          options::DhcpOption {
                              code: options::DOMAIN_NAME_SERVER,
-                             data: &DNS_IPS,
+                             data: DNS_IPS.to_vec(),
                          }],
                     offer_ip,
                     req_packet);
 }
 
-fn nak(s: &server::Server, req_packet: packet::Packet, message: &[u8]) {
+fn nak(s: &server::Server, req_packet: packet::Packet, message: Vec<u8>) {
     let _ = s.reply(options::MessageType::Nak,
                     vec![options::DhcpOption {
                              code: options::MESSAGE,

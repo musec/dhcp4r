@@ -90,11 +90,11 @@ impl Server {
         let mut opts: Vec<DhcpOption> = Vec::with_capacity(additional_options.len() + 2);
         opts.push(DhcpOption {
             code: options::DHCP_MESSAGE_TYPE,
-            data: mt,
+            data: mt.to_vec(),
         });
         opts.push(DhcpOption {
             code: options::SERVER_IDENTIFIER,
-            data: &self.server_ip,
+            data: self.server_ip.to_vec(),
         });
         opts.extend(additional_options);
 
